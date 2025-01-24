@@ -3,10 +3,25 @@ import { EButtonUsage } from "../../common/enum";
 
 const main = () => {
   let expression: string = "0";
-  let isResultDisplayed = false;
+  let isResultDisplayed = false; 
 
   const updateDisplay = () => {
     print(expression || "0");
+  };
+
+
+  const evaluateExpression = (expr: string): string => {
+    try {
+      const sanitizedExpression = expr.replace(/[^0-9+\-*/.]/g, "").replace(/X/g, "*");
+      const result = new Function(`return ${sanitizedExpression}`)();
+      return isFinite(result) ? String(result) : "Ошибка";
+    } catch {
+      return "Ошибка";
+    }
+  };
+
+  const isValidExpression = (expr: string): boolean => {
+    return /^[0-9]+(\.[0-9]*)?([+\-*/][0-9]*(\.[0-9]*)?)*$/.test(expr);
   };
 
   const handleKeyboardInput = (event: KeyboardEvent) => {
@@ -18,13 +33,8 @@ const main = () => {
 
     if (event.key === "Enter" || event.key === "=") {
       event.preventDefault();
-      try {
-        const result = eval(expression.replace("X", "*"));
-        expression = String(result);
-        isResultDisplayed = true;
-      } catch {
-        expression = "Ошибка";
-      }
+      expression = evaluateExpression(expression);
+      isResultDisplayed = true;
       updateDisplay();
       return;
     }
@@ -34,7 +44,7 @@ const main = () => {
         expression = "0";
         isResultDisplayed = false;
       } else if (expression.length > 1) {
-        expression = expression.slice(0, -1); 
+        expression = expression.slice(0, -1);
       } else {
         expression = "0";
       }
@@ -47,7 +57,11 @@ const main = () => {
         expression = "";
         isResultDisplayed = false;
       }
-      expression += event.key;
+      const newExpression = expression + event.key;
+
+      if (isValidExpression(newExpression)) {
+        expression = newExpression;
+      }
       updateDisplay();
     }
   };
@@ -56,19 +70,18 @@ const main = () => {
 
   return (state: EButtonUsage | string) => {
     if (state === EButtonUsage.OPERATOR_EQUAL) {
-      try {
-        const result = eval(expression.replace("X", "*"));
-        expression = String(result);
-        isResultDisplayed = true;
-      } catch {
-        expression = "Ошибка";
-      }
+      expression = evaluateExpression(expression);
+      isResultDisplayed = true;
       updateDisplay();
       return;
     }
 
     if (state === EButtonUsage.OPERATOR_C) {
-      expression = "0";
+      if (expression.length > 1) {
+        expression = expression.slice(0, -1);
+      } else {
+        expression = "0";
+      }
       isResultDisplayed = false;
       updateDisplay();
       return;
@@ -86,7 +99,13 @@ const main = () => {
         expression = "";
         isResultDisplayed = false;
       }
-      expression += state;
+
+      const input = state === "X" ? "*" : state;
+      const newExpression = expression + input;
+
+      if (isValidExpression(newExpression)) {
+        expression = newExpression;
+      }
       updateDisplay();
     }
   };
